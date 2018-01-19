@@ -34,8 +34,6 @@
   }(document, 'script', 'facebook-jssdk'));
 </script>
 <video id="player" controls autoplay></video>
-<canvas id="snapshot" width=640 height=480></canvas>
-<span id="frames">0</span>
 <script src="whammy.js"></script>
 <script src="jquery-3.2.1.min.js"></script>
 <script>
@@ -47,46 +45,44 @@
    * https://developers.google.com/web/fundamentals/media/capturing-images/
    */
 
-  const FPS = 5;
-  const INTERVAL = 500;
-  const TIMEOUT = 10000;
-
+  let worker;
   const player = document.getElementById('player');
-  const snapshotCanvas = document.getElementById('snapshot');
-  const frames = document.getElementById('frames');
   let videoTracks;
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(function (stream) {
+      player.srcObject = stream;
+      videoTracks = stream.getVideoTracks();
+      createVideo(500, 20, 5, function () {
+        videoTracks.forEach(function (track) {
+          track.stop()
+        });
+      });
+    });
 
-  const handleSuccess = function (stream) {
-    player.srcObject = stream;
-    videoTracks = stream.getVideoTracks();
+  function createVideo(INTERVAL, FRAMES, FPS, callback) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
 
     const encoder = new Whammy.Video(FPS);
+    let frames = 0;
 
     const timer = setInterval(() => {
-      const context = snapshot.getContext('2d');
-      context.drawImage(player, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+      const context = canvas.getContext('2d');
+      context.drawImage(player, 0, 0, canvas.width, canvas.height);
 
-      encoder.add(snapshotCanvas);
-      frames.innerHTML = Number(frames.innerHTML) + 1;
+      encoder.add(canvas);
+
+      if (++frames >= FRAMES) {
+        if (callback) callback();
+        clearInterval(timer);
+        encoder.compile(false, convertStreams);
+      }
     }, INTERVAL);
-
-    setTimeout(() => {
-      videoTracks.forEach(function (track) {
-        track.stop()
-      });
-      clearInterval(timer);
-      encoder.compile(false, function (output) {
-        convertStreams(output);
-      });
-    }, TIMEOUT);
-  };
-
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(handleSuccess);
-
-  const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
+  }
 
   function processInWebWorker() {
+    const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
     const blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files || [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
       type: 'application/javascript'
     }));
@@ -94,8 +90,6 @@
     URL.revokeObjectURL(blob);
     return worker;
   }
-
-  let worker;
 
   function convertStreams(webmBlob) {
     let fileReader = new FileReader();
@@ -112,9 +106,7 @@
       });
     };
     fileReader.readAsArrayBuffer(webmBlob);
-    if (!worker) {
-      worker = processInWebWorker();
-    }
+    if (!worker) worker = processInWebWorker();
     worker.onmessage = event => {
       const message = event.data;
       switch (message.type) {
