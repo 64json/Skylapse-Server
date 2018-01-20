@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sky-Lapse</title>
     <style>
         html,
@@ -21,6 +22,7 @@
 
         #player {
             align-self: center;
+            width: 100%;
         }
 
         #logger {
@@ -33,7 +35,7 @@
         }
 
         .line {
-            font-size: 12px;
+            font-size: 12px !important;
         }
 
         .log {
@@ -151,9 +153,6 @@
         case 'ready':
           console.log('ffmpeg-asm.js file has been loaded.');
           break;
-        case 'stdout':
-          console.log(message.data);
-          break;
         case 'start':
           console.log('ffmpeg-asm.js file received ffmpeg command.');
           break;
@@ -205,7 +204,7 @@
 
   function intercept(method, args) {
     const message = Array.prototype.slice.apply(args).join(' ');
-    const line = document.createElement('div');
+    const line = document.createElement('span');
     line.classList.add('line');
     line.classList.add(method);
     line.appendChild(document.createTextNode(message));
