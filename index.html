@@ -22,7 +22,8 @@
 
         #player {
             align-self: center;
-            width: 100%;
+            max-width: 100%;
+            max-height: 25%;
         }
 
         #logger {
@@ -191,8 +192,8 @@
       processData: false,
       contentType: false,
       cache: false,
-      success: data => {
-        console.log(data);
+      success: (data, status, xhr) => {
+        console.log(xhr.responseText);
       },
       error: (xhr, status, data) => {
         console.error(xhr.responseText);
