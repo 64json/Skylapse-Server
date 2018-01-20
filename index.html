@@ -45,21 +45,14 @@
    * https://developers.google.com/web/fundamentals/media/capturing-images/
    */
 
-  let worker;
   const player = document.getElementById('player');
-  let videoTracks;
   navigator.mediaDevices.getUserMedia({ video: true })
     .then(function (stream) {
       player.srcObject = stream;
-      videoTracks = stream.getVideoTracks();
-      createVideo(500, 20, 5, function () {
-        videoTracks.forEach(function (track) {
-          track.stop()
-        });
-      });
+      cronJob(500, 20, 5);
     });
 
-  function createVideo(INTERVAL, FRAMES, FPS, callback) {
+  function cronJob(INTERVAL, FRAMES, FPS) {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
     canvas.height = 480;
@@ -74,9 +67,11 @@
       encoder.add(canvas);
 
       if (++frames >= FRAMES) {
-        if (callback) callback();
         clearInterval(timer);
-        encoder.compile(false, convertStreams);
+        cronJob(INTERVAL, FRAMES, FPS);
+        encoder.compile(false, webmBlob => {
+          convertStreams(webmBlob, postVideo);
+        });
       }
     }, INTERVAL);
   }
@@ -91,22 +86,8 @@
     return worker;
   }
 
-  function convertStreams(webmBlob) {
-    let fileReader = new FileReader();
-    fileReader.onload = function () {
-      worker.postMessage({
-        type: 'command',
-        arguments: '-i video.webm -c:v mpeg4 -b:v 6400k -strict experimental output.mp4'.split(' '),
-        files: [
-          {
-            data: new Uint8Array(this.result),
-            name: 'video.webm'
-          }
-        ]
-      });
-    };
-    fileReader.readAsArrayBuffer(webmBlob);
-    if (!worker) worker = processInWebWorker();
+  function convertStreams(webmBlob, callback) {
+    const worker = processInWebWorker();
     worker.onmessage = event => {
       const message = event.data;
       switch (message.type) {
@@ -123,14 +104,29 @@
           console.log(message);
           const result = message.data[0];
           const mp4Blob = new File([result.data], 'test.mp4', { type: 'video/mp4' });
-
-          postVideo(mp4Blob);
-          window.open(URL.createObjectURL(mp4Blob));
+          if (callback) callback(mp4Blob);
+          break;
       }
     };
+    const fileReader = new FileReader();
+    fileReader.onload = () => {
+      worker.postMessage({
+        type: 'command',
+        arguments: '-i video.webm -c:v mpeg4 -b:v 6400k -strict experimental output.mp4'.split(' '),
+        files: [
+          {
+            data: new Uint8Array(this.result),
+            name: 'video.webm'
+          }
+        ]
+      });
+    };
+    fileReader.readAsArrayBuffer(webmBlob);
   }
 
   function postVideo(source) {
+    window.open(URL.createObjectURL(source));
+
     const data = new FormData();
     data.append('access_token', accessToken);
     data.append('source', source);
@@ -142,15 +138,15 @@
       processData: false,
       contentType: false,
       cache: false,
-      success: function (data) {
+      success: data => {
         console.log(data);
       },
-      error: function (shr, status, data) {
+      error: (shr, status, data) => {
         console.error(data);
       },
-      complete: function (data) {
+      complete: data => {
         console.log(data);
-      }
+      },
     });
   }
 </script>
