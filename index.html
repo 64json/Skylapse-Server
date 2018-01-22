@@ -123,9 +123,9 @@
     const access_token = document.getElementById('access_token').value;
 
     player.addEventListener('loadedmetadata', () => {
-      cronJob(10 * second / 100, 360, 30, 'skylapse_hourly_hays');
-      cronJob(1 * minute, 360, 30, 'skylapse_6hours_hays');
-      cronJob(4 * minute, 360, 30, 'skylapse_daily_hays');
+      cronJob(10 * second, 360, 30, 'hourly');
+      cronJob(1 * minute, 360, 30, 'every_6hrs');
+      cronJob(4 * minute, 360, 30, 'daily');
     }, false);
 
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -157,7 +157,7 @@
                 `${FPS}fps time-lapse over ${readable(INTERVAL * FRAMES)}.`,
                 `${FRAMES} pictures taken every ${readable(INTERVAL)}.`,
                 '',
-                `#${TAG}`,
+                `#skylapse_hays_${TAG}`,
               ].join('\n');
               postVideo(mp4Blob, description);
             });
@@ -183,6 +183,9 @@
         switch (message.type) {
           case 'ready':
             console.log('ffmpeg-asm.js file has been loaded.');
+            break;
+          case 'stdout':
+            console.log(message.data);
             break;
           case 'start':
             console.log('ffmpeg-asm.js file received ffmpeg command.');
@@ -265,6 +268,9 @@
     line.classList.add(method);
     line.appendChild(document.createTextNode(message));
     logger.appendChild(line);
+    if (logger.children.length > 1000) {
+      logger.removeChild(logger.children[0]);
+    }
     line.scrollIntoView();
     originalConsole[method].apply(originalConsole, args);
   }
