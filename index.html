@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sky-Lapse</title>
+    <title>Skylapse Hays</title>
     <style>
         html,
         body {
@@ -18,12 +18,46 @@
             flex-direction: column;
             align-items: stretch;
             background-color: black;
+            padding: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        #container {
+            align-self: center;
+        }
+
+        #form {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 8px;
+        }
+
+        #form input,
+        #form button {
+            padding: 8px;
+            margin: 8px;
+            background-color: white;
+            color: black;
+            border: 1px solid #DDDDDD;
         }
 
         #player {
-            align-self: center;
-            max-width: 100%;
-            max-height: 25%;
+            display: none;
+            max-width: 100vw;
+            max-height: 25vh;
+            padding: 8px;
+        }
+
+        #container.play #form {
+            display: none;
+        }
+
+        #container.play #player {
+            display: block;
         }
 
         #logger {
@@ -53,39 +87,14 @@
     </style>
 </head>
 <body>
-<script>
-  let accessToken = null;
-  window.fbAsyncInit = function () {
-    FB.init({
-      appId: '167062520550844',
-      autoLogAppEvents: true,
-      xfbml: true,
-      version: 'v2.11'
-    });
-    FB.login(response => {
-      if (response.authResponse) {
-        accessToken = response.authResponse.accessToken;
-      } else {
-        console.error('Failed to login');
-      }
-    }, {
-      scope: 'publish_actions',
-      return_scopes: true
-    });
-  };
-
-  (function (d, s, id) {
-    var js, fjs = d.getElementsByTagName(s)[0];
-    if (d.getElementById(id)) {
-      return;
-    }
-    js = d.createElement(s);
-    js.id = id;
-    js.src = "https://connect.facebook.net/en_US/sdk.js";
-    fjs.parentNode.insertBefore(js, fjs);
-  }(document, 'script', 'facebook-jssdk'));
-</script>
-<video id="player" controls autoplay></video>
+<div id="container">
+    <form id="form">
+        <input type="text" id="page_id" placeholder="Page ID" />
+        <input type="text" id="access_token" placeholder="Access Token" />
+        <button type="submit">Start</button>
+    </form>
+    <video id="player" controls autoplay></video>
+</div>
 <div id="logger"></div>
 <script src="whammy.js"></script>
 <script src="jquery-3.2.1.min.js"></script>
@@ -98,108 +107,127 @@
    * https://developers.google.com/web/fundamentals/media/capturing-images/
    */
 
+  const container = document.getElementById('container');
+  const form = document.getElementById('form');
   const player = document.getElementById('player');
   const logger = document.getElementById('logger');
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    container.classList.add('play');
+    const page_id = document.getElementById('page_id').value;
+    const access_token = document.getElementById('access_token').value;
 
-  player.addEventListener('loadedmetadata', function (e) {
-    const second = 1000;
-    const minute = 60 * second;
-    const hour = 60 * minute;
-    cronJob(500, 20, 5);
-  }, false);
+    player.addEventListener('loadedmetadata', () => {
+      const second = 1000;
+      const minute = 60 * second;
+      const hour = 60 * minute;
+      cronJob(500, 20, 5, 'skylapse_hays_test');
+    }, false);
 
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-      player.srcObject = stream;
-    });
-
-  function cronJob(INTERVAL, FRAMES, FPS) {
-    const canvas = document.createElement('canvas');
-    canvas.width = player.videoWidth;
-    canvas.height = player.videoHeight;
-
-    const encoder = new Whammy.Video(FPS);
-    let frames = 0;
-
-    const timer = setInterval(() => {
-      const context = canvas.getContext('2d');
-      context.drawImage(player, 0, 0, canvas.width, canvas.height);
-      encoder.add(canvas);
-
-      if (++frames >= FRAMES) {
-        clearInterval(timer);
-        cronJob(INTERVAL, FRAMES, FPS);
-        encoder.compile(false, webmBlob => {
-          convertStreams(webmBlob, postVideo);
-        });
-      }
-    }, INTERVAL);
-  }
-
-  function processInWebWorker() {
-    const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
-    const blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files || [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
-      type: 'application/javascript'
-    }));
-    const worker = new Worker(blob);
-    URL.revokeObjectURL(blob);
-    return worker;
-  }
-
-  function convertStreams(webmBlob, callback) {
-    const worker = processInWebWorker();
-    worker.onmessage = event => {
-      const message = event.data;
-      switch (message.type) {
-        case 'ready':
-          console.log('ffmpeg-asm.js file has been loaded.');
-          break;
-        case 'start':
-          console.log('ffmpeg-asm.js file received ffmpeg command.');
-          break;
-        case 'done':
-          const result = message.data[0];
-          const mp4Blob = new File([result.data], 'test.mp4', { type: 'video/mp4' });
-          if (callback) callback(mp4Blob);
-          break;
-      }
-    };
-    const fileReader = new FileReader();
-    fileReader.onload = function () {
-      worker.postMessage({
-        type: 'command',
-        arguments: '-i video.webm -c:v mpeg4 -b:v 6400k -strict experimental output.mp4'.split(' '),
-        files: [
-          {
-            data: new Uint8Array(this.result),
-            name: 'video.webm'
-          }
-        ]
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        player.srcObject = stream;
       });
-    };
-    fileReader.readAsArrayBuffer(webmBlob);
-  }
 
-  function postVideo(source) {
-    const data = new FormData();
-    data.append('access_token', accessToken);
-    data.append('source', source);
-    data.append('no_story', true);
-    $.ajax({
-      url: 'https://graph-video.facebook.com/v2.11/me/videos',
-      type: 'POST',
-      data,
-      processData: false,
-      contentType: false,
-      cache: false,
-      success: (data, status, xhr) => {
-        console.log(xhr.responseText);
-      },
-      error: (xhr, status, data) => {
-        console.error(xhr.responseText);
-      },
-    });
-  }
+    function cronJob(INTERVAL, FRAMES, FPS, TAG) {
+      const canvas = document.createElement('canvas');
+      canvas.width = player.videoWidth;
+      canvas.height = player.videoHeight;
+
+      const encoder = new Whammy.Video(FPS);
+      let frames = 0;
+
+      const timer = setInterval(() => {
+        const context = canvas.getContext('2d');
+        context.drawImage(player, 0, 0, canvas.width, canvas.height);
+        encoder.add(canvas);
+
+        console.log(`Picture taken. (${TAG} - frame #${frames})`);
+
+        if (++frames >= FRAMES) {
+          clearInterval(timer);
+          cronJob(INTERVAL, FRAMES, FPS, TAG);
+          encoder.compile(false, webmBlob => {
+            convertStreams(webmBlob, mp4Blob => {
+              postVideo(mp4Blob, `#${TAG}`);
+            });
+          });
+        }
+      }, INTERVAL);
+    }
+
+    function processInWebWorker() {
+      const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
+      const blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files || [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
+        type: 'application/javascript'
+      }));
+      const worker = new Worker(blob);
+      URL.revokeObjectURL(blob);
+      return worker;
+    }
+
+    function convertStreams(webmBlob, callback) {
+      const worker = processInWebWorker();
+      worker.onmessage = event => {
+        const message = event.data;
+        switch (message.type) {
+          case 'ready':
+            console.log('ffmpeg-asm.js file has been loaded.');
+            break;
+          case 'start':
+            console.log('ffmpeg-asm.js file received ffmpeg command.');
+            break;
+          case 'done':
+            const result = message.data[0];
+            const mp4Blob = new File([result.data], 'test.mp4', { type: 'video/mp4' });
+            if (callback) callback(mp4Blob);
+            break;
+        }
+      };
+      const fileReader = new FileReader();
+      fileReader.onload = function () {
+        worker.postMessage({
+          type: 'command',
+          arguments: '-i video.webm -c:v mpeg4 -b:v 6400k -strict experimental output.mp4'.split(' '),
+          files: [
+            {
+              data: new Uint8Array(this.result),
+              name: 'video.webm'
+            }
+          ]
+        });
+      };
+      fileReader.readAsArrayBuffer(webmBlob);
+    }
+
+    function postVideo(source, description) {
+      if (!access_token) {
+        window.open(URL.createObjectURL(source));
+        return;
+      }
+
+      const data = new FormData();
+      data.append('access_token', access_token);
+      data.append('source', source);
+      data.append('description', description);
+      data.append('no_story', true);
+      $.ajax({
+        url: `https://graph-video.facebook.com/v2.11/${page_id}/videos`,
+        type: 'POST',
+        data,
+        processData: false,
+        contentType: false,
+        cache: false,
+        success: (data, status, xhr) => {
+          console.log(xhr.responseText);
+        },
+        error: (xhr, status, data) => {
+          console.error(xhr.responseText);
+        },
+      });
+    }
+
+  });
 
   const originalConsole = window.console;
 
