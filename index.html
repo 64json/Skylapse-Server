@@ -107,6 +107,11 @@
    * https://developers.google.com/web/fundamentals/media/capturing-images/
    */
 
+  const second = 1000;
+  const minute = 60 * second;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
   const container = document.getElementById('container');
   const form = document.getElementById('form');
   const player = document.getElementById('player');
@@ -118,10 +123,7 @@
     const access_token = document.getElementById('access_token').value;
 
     player.addEventListener('loadedmetadata', () => {
-      const second = 1000;
-      const minute = 60 * second;
-      const hour = 60 * minute;
-      cronJob(500, 20, 5, 'skylapse_hays_test');
+      cronJob(500, 10, 5, 'skylapse_hays_test');
     }, false);
 
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -149,7 +151,13 @@
           cronJob(INTERVAL, FRAMES, FPS, TAG);
           encoder.compile(false, webmBlob => {
             convertStreams(webmBlob, mp4Blob => {
-              postVideo(mp4Blob, `#${TAG}`);
+              const description = [
+                `${FPS}fps time-lapse over ${readable(INTERVAL * FRAMES)}.`,
+                `${FRAMES} pictures taken every ${readable(INTERVAL)}.`,
+                '',
+                `#${TAG}`,
+              ].join('\n');
+              postVideo(mp4Blob, description);
             });
           });
         }
@@ -201,6 +209,8 @@
     }
 
     function postVideo(source, description) {
+      console.log(description);
+
       if (!access_token) {
         window.open(URL.createObjectURL(source));
         return;
@@ -225,6 +235,21 @@
           console.error(xhr.responseText);
         },
       });
+    }
+
+    function readable(v) {
+      const d = v / day | 0;
+      const h = v % day / hour | 0;
+      const m = v % hour / minute | 0;
+      const s = v % minute / second | 0;
+      const ms = v % second;
+      return [
+        d && (d + ' day(s)'),
+        h && (h + ' hour(s)'),
+        m && (m + ' minute(s)'),
+        s && (s + ' second(s)'),
+        ms && (ms + ' millisecond(s)'),
+      ].filter(v => v).join(' ');
     }
 
   });
