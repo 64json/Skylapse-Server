@@ -123,7 +123,7 @@
     const access_token = document.getElementById('access_token').value;
 
     player.addEventListener('loadedmetadata', () => {
-      cronJob(10 * second, 360, 30, 'skylapse_hourly_hays');
+      cronJob(10 * second / 100, 360, 30, 'skylapse_hourly_hays');
       cronJob(1 * minute, 360, 30, 'skylapse_6hours_hays');
       cronJob(4 * minute, 360, 30, 'skylapse_daily_hays');
     }, false);
