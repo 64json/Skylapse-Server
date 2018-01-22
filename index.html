@@ -36,13 +36,16 @@
             padding: 8px;
         }
 
+        #form select,
         #form input,
         #form button {
+            -webkit-appearance: none;
             padding: 8px;
             margin: 8px;
             background-color: white;
             color: black;
             border: 1px solid #DDDDDD;
+            border-radius: 0;
         }
 
         #player {
@@ -89,6 +92,7 @@
 <body>
 <div id="container">
     <form id="form">
+        <select id="device_id"></select>
         <input type="text" id="page_id" placeholder="Page ID" />
         <input type="text" id="access_token" placeholder="Access Token" />
         <button type="submit">Start</button>
@@ -102,9 +106,10 @@
   /**
    * References
    * -
+   * https://developers.google.com/web/fundamentals/media/capturing-images/
+   * https://github.com/samdutton/simpl
    * https://github.com/muaz-khan/Ffmpeg.js
    * https://github.com/antimatter15/whammy
-   * https://developers.google.com/web/fundamentals/media/capturing-images/
    */
 
   const second = 1000;
@@ -114,13 +119,32 @@
 
   const container = document.getElementById('container');
   const form = document.getElementById('form');
+  const device_id = document.getElementById('device_id');
+  const page_id = document.getElementById('page_id');
+  const access_token = document.getElementById('access_token');
   const player = document.getElementById('player');
   const logger = document.getElementById('logger');
+
+  navigator.mediaDevices.enumerateDevices()
+    .then(deviceInfos => {
+      for (let i = 0; i !== deviceInfos.length; ++i) {
+        const deviceInfo = deviceInfos[i];
+        const option = document.createElement('option');
+        option.value = deviceInfo.deviceId;
+        if (deviceInfo.kind === 'videoinput') {
+          option.text = deviceInfo.label || 'camera ' + (device_id.length + 1);
+          device_id.appendChild(option);
+        }
+      }
+    })
+    .catch(console.error);
+
   form.addEventListener('submit', e => {
     e.preventDefault();
     container.classList.add('play');
-    const page_id = document.getElementById('page_id').value;
-    const access_token = document.getElementById('access_token').value;
+    const deviceId = device_id.value;
+    const pageId = page_id.value;
+    const accessToken = access_token.value;
 
     player.addEventListener('loadedmetadata', () => {
       cronJob(0.1 * second, 30, 30, 'test');
@@ -129,10 +153,15 @@
       cronJob(4 * minute, 360, 30, 'daily');
     }, false);
 
-    navigator.mediaDevices.getUserMedia({ video: true })
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: { exact: deviceId }
+      }
+    })
       .then(stream => {
         player.srcObject = stream;
-      });
+      })
+      .catch(console.error);
 
     function cronJob(INTERVAL, FRAMES, FPS, TAG) {
       const canvas = document.createElement('canvas');
@@ -217,18 +246,18 @@
     function postVideo(source, description) {
       console.log(description);
 
-      if (!access_token) {
+      if (!accessToken) {
         window.open(URL.createObjectURL(source));
         return;
       }
 
       const data = new FormData();
-      data.append('access_token', access_token);
+      data.append('access_token', accessToken);
       data.append('source', source);
       data.append('description', description);
       data.append('no_story', true);
       $.ajax({
-        url: `https://graph-video.facebook.com/v2.11/${page_id}/videos`,
+        url: `https://graph-video.facebook.com/v2.11/${pageId}/videos`,
         type: 'POST',
         data,
         processData: false,
