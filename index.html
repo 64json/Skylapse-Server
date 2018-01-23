@@ -255,7 +255,6 @@
       data.append('access_token', accessToken);
       data.append('source', source);
       data.append('description', description);
-      data.append('no_story', true);
       $.ajax({
         url: `https://graph-video.facebook.com/v2.11/${pageId}/videos`,
         type: 'POST',
