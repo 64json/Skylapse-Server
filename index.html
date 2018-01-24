@@ -117,6 +117,11 @@
   const hour = 60 * minute;
   const day = 24 * hour;
 
+  const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
+  const blobURL = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files || [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
+    type: 'application/javascript'
+  }));
+
   const container = document.getElementById('container');
   const form = document.getElementById('form');
   const device_id = document.getElementById('device_id');
@@ -149,7 +154,7 @@
     player.addEventListener('loadedmetadata', () => {
       //cronJob(0.1 * second, 30, 30, 'test');
       //cronJob(10 * second, 360, 30, 'hourly');
-      cronJob(1 * minute, 360, 30, 'every_6hrs');
+      //cronJob(1 * minute, 360, 30, 'every_6hrs');
       cronJob(4 * minute, 360, 30, 'daily');
     }, false);
 
@@ -196,18 +201,8 @@
       }, INTERVAL);
     }
 
-    function processInWebWorker() {
-      const workerPath = 'https://archive.org/download/ffmpeg_asm/ffmpeg_asm.js';
-      const blob = URL.createObjectURL(new Blob(['importScripts("' + workerPath + '");var now = Date.now;function print(text) {postMessage({"type" : "stdout","data" : text});};onmessage = function(event) {var message = event.data;if (message.type === "command") {var Module = {print: print,printErr: print,files: message.files || [],arguments: message.arguments || [],TOTAL_MEMORY: message.TOTAL_MEMORY || false};postMessage({"type" : "start","data" : Module.arguments.join(" ")});postMessage({"type" : "stdout","data" : "Received command: " +Module.arguments.join(" ") +((Module.TOTAL_MEMORY) ? ".  Processing with " + Module.TOTAL_MEMORY + " bits." : "")});var time = now();var result = ffmpeg_run(Module);var totalTime = now() - time;postMessage({"type" : "stdout","data" : "Finished processing (took " + totalTime + "ms)"});postMessage({"type" : "done","data" : result,"time" : totalTime});}};postMessage({"type" : "ready"});'], {
-        type: 'application/javascript'
-      }));
-      const worker = new Worker(blob);
-      URL.revokeObjectURL(blob);
-      return worker;
-    }
-
     function convertStreams(webmBlob, callback) {
-      const worker = processInWebWorker();
+      const worker = new Worker(blobURL);
       worker.onmessage = event => {
         const message = event.data;
         switch (message.type) {
