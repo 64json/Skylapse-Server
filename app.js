@@ -41,8 +41,6 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(express.static(path.resolve(__dirname, 'client')));
-
 app.post('/auth', (req, res) => {
   const { password } = req.body;
   if (password !== PASSWORD) {
