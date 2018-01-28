@@ -82,7 +82,7 @@ app.post('/:endpoint/:taken_at', (req, res, next) => {
   const { taken_at } = req.params;
   res.json({ taken_at });
 
-  mergeHourly(5 * minute)
+  mergeHourly(12 * second)
     .then(mergeDaily)
     .then(mergeWeekly)
     .then(mergeMonthly)
@@ -157,7 +157,7 @@ const merger = (tag, period, src, dest, speed = 1) => interval => new Promise((r
 });
 
 const mergeHourly = merger('hourly', hour, dirPictures, dirHourlyVideos); // 10 sec
-const mergeDaily = merger('daily', 3 * hour, dirHourlyVideos, dirDailyVideos, 2); // 2 min
+const mergeDaily = merger('daily', day, dirHourlyVideos, dirDailyVideos, 2); // 2 min
 const mergeWeekly = merger('weekly', week, dirDailyVideos, dirWeeklyVideos, 2); // 7 min
 const mergeMonthly = merger('monthly', month, dirWeeklyVideos, dirMonthlyVideos, 2); // 14 min
 const mergeYearly = merger('yearly', year, dirMonthlyVideos, dirYearlyVideos, 2); // 91 min
