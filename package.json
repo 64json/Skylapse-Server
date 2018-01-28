@@ -1,0 +1,29 @@
+{
+  "name": "skylapse-hays",
+  "version": "1.0.0",
+  "description": "An automated bot that posts a time-lapse video of the Hays sky every day.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io.git"
+  },
+  "author": "Jinseo Jason Park",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io/issues"
+  },
+  "homepage": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io",
+  "dependencies": {
+    "body-parser": "latest",
+    "express": "^4.16.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "morgan": "^1.9.0",
+    "multer": "^1.3.0",
+    "randomstring": "latest",
+    "request": "^2.83.0",
+    "concat-stream": "latest"
+  }
+}
