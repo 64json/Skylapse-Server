@@ -82,7 +82,7 @@ app.post('/:endpoint/:taken_at', (req, res, next) => {
   const { taken_at } = req.params;
   res.json({ taken_at });
 
-  mergeHourly(12 * second)
+  mergeHourly(5 * minute)
     .then(mergeDaily)
     .then(mergeWeekly)
     .then(mergeMonthly)
