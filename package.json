@@ -1,21 +1,21 @@
 {
-  "name": "skylapse-hays",
+  "name": "skylapse-server",
   "version": "1.0.0",
-  "description": "An automated bot that posts a time-lapse video of the Hays sky every day.",
+  "description": "An automated bot that posts a time-lapse video periodically.",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io.git"
+    "url": "https://github.com/parkjs814/Skylapse-Server.git"
   },
   "author": "Jinseo Jason Park",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io/issues"
+    "url": "https://github.com/parkjs814/Skylapse-Server/issues"
   },
-  "homepage": "https://github.com/Skylapse-Hays/Skylapse-Hays.github.io",
+  "homepage": "https://github.com/parkjs814/Skylapse-Server",
   "dependencies": {
     "body-parser": "latest",
     "express": "^4.16.2",
