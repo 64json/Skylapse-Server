@@ -27,7 +27,7 @@ const readable = v => {
     [minute, 'minute'],
     [second, 'second'],
     [millisecond, 'millisecond'],
-  ].map((size, unit) => {
+  ].map(([size, unit]) => {
     const value = v % prevSize / size | 0;
     prevSize = size;
     if (value === 0) return null;

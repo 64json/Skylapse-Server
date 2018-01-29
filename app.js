@@ -28,6 +28,7 @@ const dirDailyVideos = path.resolve(dirVideos, 'daily');
 const dirWeeklyVideos = path.resolve(dirVideos, 'weekly');
 const dirMonthlyVideos = path.resolve(dirVideos, 'monthly');
 const dirYearlyVideos = path.resolve(dirVideos, 'yearly');
+const pathEndpoint = path.resolve(dirTemp, 'endpoint.txt');
 
 const app = express();
 const storage = multer.diskStorage({
@@ -39,6 +40,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 let randomEndpoint = null;
+if (fs.existsSync(pathEndpoint)) {
+  randomEndpoint = fs.readFileSync(pathEndpoint, 'utf8');
+}
 
 app.use(morgan('dev'));
 
@@ -67,6 +71,8 @@ app.post('/auth', (req, res) => {
     return;
   }
   randomEndpoint = randomstring.generate(8);
+  mkdir(dirTemp);
+  fs.writeFileSync(pathEndpoint, randomEndpoint);
   res.json({ endpoint: randomEndpoint });
 });
 
